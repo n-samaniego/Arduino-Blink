@@ -1,0 +1,5 @@
+CompileFlags:
+  Add:
+    - --target=avr
+    - -mmcu=atmega328p
+    - -I/usr/avr/include
