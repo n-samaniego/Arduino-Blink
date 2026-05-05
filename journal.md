@@ -9,6 +9,8 @@ tags:
 ## Introduction
 Here's my first foray into the embedded world. Using an Arduino UNO R3, I'll be writing some bare-metal C to make an LED on the board blink. Additionally, I'll drive an external LED to blink at the same time. I'll be doing this twice: once with the use of a library, and a second time with no help from the library.
 
+After completing those first two parts, I'll be rewriting my program in AVR assembly. Since this is the first time I will be writing assembly code, doing it on a trivial project such as this will be a good learning experience. That is part 3. Part 4 will be back to C and using in-line assembly. I think that, for the future, that will be the way I'll be utilizing assembly in my code, so it's also good to have some exposure here when the complexity is still low.
+
 Throughout my learning process, I'll be utilizing the use of Claude AI as a mentor to help me through things I don't understand. Already, it has been a great tool in understanding how to use Git, set up my development environment, get started with learning C, and so many other things. As I'm embarking on this journey alone, internet searches as well as talking to Claude AI are my main sources of guidance.
 
 
@@ -43,7 +45,7 @@ Here are some important things I learned from the datasheet:
 > On the Arduino, there is a pin called A0 (or D14). This is connected to PC0 on the ATMEGA328P. In order to configure this pin, I would need to write to bit 0 of DDRC, PORTC, and PINC.
 
 ### The Arduino Pin Out
-I also grabbed the Arduino UNO R3's pin out. In the advanced section, it lists the names/uses of the pins for interrupts, I2C, analog, MCU, and Arduino itself. This will be vital for my use, as I plan to heavily reference this when writing my code. 
+I also grabbed the Arduino UNO R3's pin out. In the advanced section, it lists the names/uses of the pins for interrupts, I2C, analog, MCU, and Arduino itself. This will be vital for my use, as I plan to heavily reference this when writing my code.
 
 Now, to build!
 
@@ -185,3 +187,18 @@ I do know that the clock frequency of the UNO is 16Mhz, so 16,000,000 cycles in 
 Not too bad!
 
 With this, I copied the Makefile, changed the TARGET and SRC variables so that it works with bare-blink.c, made it, and flashed it. I got the same expected behavior. Part 2 is a success.
+
+
+
+## Part 3: blink.S
+Once again, I'll be rewriting my program, but this time in AVR assembly. As it is my first time writing assembly, I expect this to take a while.
+
+My first step is to look at what assembly of my program might look like. Doing the following command in the terminal gives me a blink.s to peruse:
+```
+avr-gcc -mmcu=atmega328p -Os -S -o blink.s bare-blink.c
+```
+
+Looking at the instructions with the documentation there are definitely some things I recognize. Instructions such as out, subi, sbci, and nop are all very clear to me, but I still really have no idea how to read and understand what's going on. I'm going to walk through it with the help of Claude to understand what's going on.
+
+### Understanding the Instructions
+
