@@ -59,7 +59,7 @@ DDRB = 1;
 > DDRB is a dereferenced pointer. With the inclusion of avr-libc, I can basically treat DDRB as a variable for this first part of my project.
 
 > [!note] On pointers and dereferencing
-> The & operator gives you the address of a variable in memory. The use of * depends on the context. When declaring a pointer, something like int *p "means p is a pointer to an int". When using a pointer, *p means "go to the address p holds and give me the value there", which is dereferencing p.
+> The & operator gives you the address of a variable in memory. The use of * depends on the context. When declaring a pointer, something like int *p "means p is a pointer to an int". When using a pointer, *p means "go to the address p holds and give me the value there (or I'm going to write here)", which is dereferencing p.
 
 Because the register is literally a byte in memory, configuring PB0 means writing to the least significant bit in that register. If we were to take a look at that spot in memory, we'd see "0000 0001".
 
@@ -85,7 +85,9 @@ DDRB |= 1;
 
 This is a bitmask operation, and I can utilize AND, OR, and NOT to do any number of similar operations if I need to do so.
 
-## The First Iteration of blink.c
+
+
+## Part 1: blink.c
 Alright, I'm writing this after I finished making both the on-board LED and external LED blink. Hooray! I did it!
 
 That was... not that hard, and yet, it was the product of a few hours of work. Between learning some of the C syntax I talked about above, I also had to struggle with a lot of things. Wrong headers, my neovim LSP throwing me warnings, trying to write clean and concise code, writing a makefile for the first time (and everything that came with that), and getting my computer to let me flash my arduino... basically, coding was the easy part.
@@ -150,4 +152,36 @@ Both LEDs were blinking, in sync! Exactly what I wanted! I don't feel particular
 
 
 
-## blink.c, Part 2
+## Part 2: bare-blank.c
+Alright, just finished testing my program for part 2! Everything looks good, and I learned a lot. Again, the reason I'm doing this is to tear back one layer of abstraction and get even closer to the hardware. Without arv-libc, I had to implement some defines, learn about casts, struggle again with understanding pointers, and reimplement the delay. The while loop was generally the same, except for one specific part.
+
+### Casts
+What even are they? It took me a minute to understand and why I needed them, but now it makes sense.
+
+In order to write to the registers I needed to, I had to do something special.
+
+Let's take the example of register DDRB. avr-libc abstracted away this part, but it's address is not literally 'DDRB'. Looking at the datasheet again, DDRB's address starts at 0x24 and is 8 bits wide.
+
+To write to this address, I had to utilize a cast:
+```c
+#define DDRB *(volatile uint8_t *)0x24
+```
+
+Again, 0x24 is the memory address, but if I just say "0x24 = 1 << 5", my compiler would probably throw a fit. I haven't tried it, but I really don't want to try.
+
+The cast itself is the "(volatile uint8_t *)" bit. To break it down, volatile tells the compiler that every read and write to this address matters. uint8_t is defined in stdint.h, which is why it was my only include. It's been part of the C standard library since C99, so any compiler (that can compile from C99 on) has that available. uint8_t is a typedef (indicated by the _t), which is basically an alias for an unsigned 8 bit integer. the * tells the compiler to treat whatever follows as a pointer to a volatile uint8_t.
+
+Finally, the * on the outside means that I am dereferencing the pointer.
+
+I did this for DDRB, DDRC, PORTB, and PORTC, with all their corresponding memory addresses.
+
+### The Delay
+Because I am not including util/delay.h, I'm unable to use _delay_ms() in this part. Luckly, there is a compiler build in function (in avr-gcc) called __builtin_avr_delay_cycles(). It takes in a number of cycles and waits for that many to pass before continuing with the rest of the code.
+
+In my first implementation, I gave it a delay of 500ms between on and off. To do this in the second part, I had to calculate how many cycles I needed to pass for it to be half a second.
+
+I do know that the clock frequency of the UNO is 16Mhz, so 16,000,000 cycles in one second. A half second would take half as many cycles, so 8,000,000.
+
+Not too bad!
+
+With this, I copied the Makefile, changed the TARGET and SRC variables so that it works with bare-blink.c, made it, and flashed it. I got the same expected behavior. Part 2 is a success.
