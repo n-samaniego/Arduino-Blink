@@ -201,4 +201,30 @@ avr-gcc -mmcu=atmega328p -Os -S -o blink.s bare-blink.c
 Looking at the instructions with the documentation there are definitely some things I recognize. Instructions such as out, subi, sbci, and nop are all very clear to me, but I still really have no idea how to read and understand what's going on. I'm going to walk through it with the help of Claude to understand what's going on.
 
 ### Understanding the Instructions
+There was one thing that was bugging me while reading the data sheet for the MCU. Why were there two addresses for each of the configuration registers? For example, PORTC has it's address written as "0x08 (0x28)".
 
+I spent a good couple hours here trying to understand just what was happening here, and what registers were vs. I/O addresses.
+
+Register's are a CPU's "scratch space". A good analogy that Claude came up with to help me understand was that they are the CPU's hands. To write a value into an I/O address, you have to hand it to the CPU and then it can put it down somewhere.
+
+This is one of those abstractions that I wanted to tear away! It's also so much clearer when looking at the assembly just how granular it is:
+```
+LDI R25, lo8(32) ; load the value 32 into R25
+OUT 0x5, R25     ; write R25 to PORTB
+```
+
+With these two lines, taken from the generated blink.s, you can see that we are currently using two instructions, 'LDI' and 'OUT'. LDI writes to the R25 register. lo8(32) means 'the lowest 8 bits of 32', so it gives a byte of binary with a 1 in the fifth bit position (00100000). OUT writes to a spot in memory, in this case to 0x5. It takes the value from R25 and put's it at that memory address.
+
+> [!note]
+> 0x05 and 0x5 are identical values. Leading 0's do not matter in this case, like with binary. On a related note, '0010000' and '10000' are both equivalent to 32 in decimal, but since the computer likes to work with bytes, lo8() guarantees a byte-sized value.
+
+### Missing from blink.s
+The blink.s that avr-gcc gave me has a few things I don't need and also has things that are missing that I need to implement myself.
+
+One of these is the reset vector. When the UNO power's on or resets, the CPU starts executing from the address 0x0000 in flash. When I was doing my program in C with avr-libc, it put a jump instruction there to point to it's startup code, which then called main(). This was missing from blink.s, and I need to do this in my code.
+
+I also need to initialize the stack pointer. This was in blink.s, but it's taking me a bit to understand what is happening here.
+
+I need to point the stack pointer to the top of RAM. For the ATMEGA328P, that address is 0x88FF. Using LDI and OUT, I'll write those values to __SP_H__ and __SP_L__, the stack pointer addresses. These I also need to initialize myself. Because the RAM's address is 16 bit and this is an 8 bit CPU, I need two (both high and low) to properly capture the address.
+
+With these two, I am ready to start writing blink.S!
